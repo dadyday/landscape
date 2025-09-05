@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>GoJS Editierbares Diagramm</title>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/gojs/2.3.13/go.min.js"></script>
+	<style>
+      body {
+          font-family: Arial, sans-serif;
+          margin: 0;
+          padding: 20px;
+          background-color: #f5f5f5;
+      }
+
+      .container {
+          display: flex;
+          gap: 20px;
+          height: 80vh;
+      }
+
+      #diagramDiv {
+          flex: 1;
+          background-color: white;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+      }
+
+      .controls {
+          width: 250px;
+          background-color: white;
+          padding: 15px;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+          height: fit-content;
+      }
+
+      .node-type {
+          margin: 5px 0;
+          padding: 8px;
+          background-color: #e9ecef;
+          border: 1px solid #dee2e6;
+          border-radius: 4px;
+          cursor: pointer;
+          text-align: center;
+          font-size: 12px;
+      }
+
+      .node-type:hover {
+          background-color: #dee2e6;
+      }
+
+      .link-type {
+          margin: 5px 0;
+          padding: 6px;
+          border: 1px solid #ccc;
+          border-radius: 3px;
+          cursor: pointer;
+          text-align: center;
+          font-size: 11px;
+      }
+
+      h3 {
+          margin-top: 0;
+          color: #333;
+          font-size: 16px;
+      }
+
+      .instructions {
+          background-color: #f8f9fa;
+          padding: 10px;
+          border-radius: 4px;
+          margin-top: 15px;
+          font-size: 12px;
+          color: #666;
+      }
+	</style>
+</head>
+<body>
+<h1>GoJS Editierbares Diagramm</h1>
+
+<div class="container">
+	<div id="diagramDiv"></div>
+
+	<div class="controls">
+		<h3>Node-Typen</h3>
+		<div class="node-type" onclick="setNodeType(event, 'group')" style="background-color: #e3f2fd;">📁 Group</div>
+		<div class="node-type" onclick="setNodeType(event, 'modul')" style="background-color: #f3e5f5;">⚙️ Modul</div>
+		<div class="node-type" onclick="setNodeType(event, 'api')" style="background-color: #e8f5e8;">🔗 API</div>
+		<div class="node-type" onclick="setNodeType(event, 'app')" style="background-color: #fff3e0;">📱 App</div>
+		<div class="node-type" onclick="setNodeType(event, 'cron')" style="background-color: #fce4ec;">⏰ Cron</div>
+		<div class="node-type" onclick="setNodeType(event, 'daemon')" style="background-color: #f1f8e9;">👹 Daemon</div>
+		<div class="node-type" onclick="setNodeType(event, 'script')" style="background-color: #e0f2f1;">📜 Script</div>
+
+		<h3>Link-Typen</h3>
+		<div class="link-type" onclick="setLinkType(event, 'data')" style="background-color: #e3f2fd;">➡️ Daten</div>
+		<div class="link-type" onclick="setLinkType(event, 'control')" style="background-color: #f3e5f5;">🎮 Kontrolle</div>
+		<div class="link-type" onclick="setLinkType(event, 'trigger')" style="background-color: #fff3e0;">⚡ Trigger</div>
+		<div class="link-type" onclick="setLinkType(event, 'dependency')" style="background-color: #fce4ec;">🔗 Abhängigkeit</div>
+
+		<div class="instructions">
+			<strong>Bedienung:</strong><br>
+			• Rechtsklick auf leere Fläche: Node hinzufügen<br>
+			• Rechtsklick auf Node: Node löschen<br>
+			• Von rotem Port ziehen: Verbindung erstellen<br>
+			• Nodes in Gruppen ziehen: Zuordnung ändern<br>
+			• Doppelklick auf Text: Bearbeiten
+		</div>
+	</div>
+</div>
+
+<script>
+	const $ = go.GraphObject.make;
+	let selectedNodeType = 'modul';
+	let selectedLinkType = 'data';
+
+	// Diagramm initialisieren
+	const diagram = $(go.Diagram, "diagramDiv", {
+		"undoManager.isEnabled": true,
+		"linkingTool.direction": go.LinkingTool.ForwardsOnly,
+		"linkingTool.portGravity": 20,
+		"draggingTool.dragsTree": false,
+		"commandHandler.deletesTree": false,
+		"commandHandler.memberValidation": function(group, node) {
+			// Nur normale Nodes können zu Groups hinzugefügt werden, nicht andere Groups
+			return !(node instanceof go.Group);
+		},
+		// Kein automatisches Layout - freie Positionierung
+		layout: $(go.Layout)
+	});
+
+	// Group-Template für Gruppen
+	diagram.groupTemplate = $(go.Group, "Auto",
+		{
+			layout: $(go.LayeredDigraphLayout, {
+				// direction: 90,
+				// layerSpacing: 10
+			}),
+			computesBoundsAfterDrag: true,
+			handlesDragDropForMembers: true,
+			mouseDragEnter: function(e, group, prev) {
+				// Visueller Feedback beim Drag-Enter
+				const shape = group.findObject("GROUPSHAPE");
+				if (shape) {
+					shape.stroke = "#FF6B6B";
+					shape.strokeWidth = 3;
+				}
+			},
+			mouseDragLeave: function(e, group, next) {
+				// Visueller Feedback beim Drag-Leave
+				const shape = group.findObject("GROUPSHAPE");
+				if (shape) {
+					shape.stroke = "#4A90E2";
+					shape.strokeWidth = 2;
+				}
+			},
+			mouseDrop: function(e, group) {
+				// Node zur Group hinzufügen wenn sie darüber abgelegt wird
+				const ok = group.addMembers(group.diagram.selection, true);
+				if (!ok) group.diagram.currentTool.doCancel();
+
+				// Visueller Feedback zurücksetzen
+				const shape = group.findObject("GROUPSHAPE");
+				if (shape) {
+					shape.stroke = "#4A90E2";
+					shape.strokeWidth = 2;
+				}
+			}
+		},
+		$(go.Shape, "Rectangle",
+			{
+				name: "GROUPSHAPE",
+				fill: "rgba(128,128,128,0.1)",
+				stroke: "#4A90E2",
+				strokeWidth: 2,
+				strokeDashArray: [5, 5]
+			}
+		),
+		$(go.Panel, "Vertical",
+			$(go.TextBlock,
+				{
+					alignment: go.Spot.Left,
+					font: "Bold 12pt Sans-Serif",
+					margin: new go.Margin(5, 5, 0, 5),
+					editable: true
+				},
+				new go.Binding("text", "title").makeTwoWay()
+			),
+			$(go.Placeholder,
+				{
+					padding: new go.Margin(5, 10, 10, 10)
+				}
+			)
+		)
+	);
+
+	// Node-Template definieren (Auto-Type mit Ports am Ende)
+	diagram.nodeTemplate = $(go.Node, "Auto",
+		{
+			locationSpot: go.Spot.Center
+		},
+		// Hauptform der Node
+		$(go.Shape, "RoundedRectangle",
+			{
+				strokeWidth: 2,
+				minSize: new go.Size(180, 60)
+			},
+			new go.Binding("fill", "type", getNodeColor),
+			new go.Binding("stroke", "type", getNodeStroke)
+		),
+		// Panel für Titel und Beschreibung
+		$(go.Panel, "Vertical",
+			{
+				margin: 12,
+				maxSize: new go.Size(156, NaN),
+			},
+			// Titel
+			$(go.TextBlock,
+				{
+					font: "Bold 12pt Sans-Serif",
+					textAlign: "left",
+					editable: true,
+					margin: new go.Margin(0, 0, 5, 0),
+					maxSize: new go.Size(156, NaN),
+					wrap: go.TextBlock.WrapFit
+				},
+				new go.Binding("text", "title").makeTwoWay(),
+				new go.Binding("stroke", "type", getNodeTitleColor)
+			),
+			// Beschreibung
+			$(go.TextBlock,
+				{
+					font: "9pt Sans-Serif",
+					textAlign: "left",
+					editable: true,
+					maxSize: new go.Size(156, NaN),
+					wrap: go.TextBlock.WrapFit,
+					stroke: "#666666"
+				},
+				new go.Binding("text", "description").makeTwoWay()
+			)
+		),
+		// Linker Port (blau, für eingehende Verbindungen)
+		$(go.Shape, "Rectangle",
+			{
+				width: 8,
+				height: 8,
+				alignment: go.Spot.MiddleLeft,
+				alignmentFocus: go.Spot.Center,
+				portId: "left",
+				fromLinkable: false,
+				toLinkable: true,
+				fill: "lightblue",
+				stroke: "blue",
+				strokeWidth: 1
+			}
+		),
+		// Rechter Port (rot, für ausgehende Verbindungen)
+		$(go.Shape, "Rectangle",
+			{
+				width: 8,
+				height: 8,
+				alignment: go.Spot.MiddleRight,
+				alignmentFocus: go.Spot.Center,
+				portId: "right",
+				fromLinkable: true,
+				toLinkable: false,
+				fill: "lightcoral",
+				stroke: "red",
+				strokeWidth: 1
+			}
+		)
+	);
+
+
+
+	// Link-Template
+	diagram.linkTemplate = $(go.Link,
+		{
+			routing: go.Link.AvoidsNodes,
+			curve: go.Link.JumpOver, // go.Link.Bezier,
+			corner: 5,
+			fromShortLength: 10,
+			toShortLength: 10,
+			relinkableFrom: true,
+			relinkableTo: true,
+			reshapable: true,
+			resegmentable: true,
+			fromSpot: go.Spot.LeftRightSides,
+			toSpot: go.Spot.LeftRightSides,
+			mouseEnter: (e, link) => link.elt(0).stroke = "rgba(0,90,156,0.3)",
+			mouseLeave: (e, link) => link.elt(0).stroke = "transparent",
+		},
+		new go.Shape( { // thick undrawn path
+				isPanelMain: true,
+				stroke: "transparent",
+				strokeWidth: 12,
+			},
+			// new go.Binding("stroke", "type", getLinkColor),
+		),
+		$(go.Shape, { // visible path
+				isPanelMain: true,
+				strokeWidth: 2,
+			},
+			new go.Binding("stroke", "type", getLinkColor),
+			// new go.Binding("strokeWidth", "type", getLinkWidth)
+		),
+		$(go.Shape, {
+				strokeWidth: 2,
+			},
+			new go.Binding("fill", "type", getLinkColor),
+			new go.Binding("stroke", "type", getLinkColor),
+			new go.Binding("toArrow", "type", getLinkToArrow),
+		),
+		$(go.Shape, {
+				strokeWidth: 2,
+			},
+			new go.Binding("fromArrow", "type", getLinkFromArrow),
+			new go.Binding("fill", "type", getLinkColor),
+			new go.Binding("stroke", "type", getLinkColor),
+		),
+		$(go.Panel, "Auto", { // from Info
+				segmentIndex: -1,
+				segmentOffset: new go.Point(NaN, NaN), // aside of arrow
+				segmentOrientation: 26,
+				// a: go.Orientation
+			},
+			$(go.Shape, "RoundedRectangle", {
+					fill: "transparent",
+					stroke: "gray",
+				},
+				new go.Binding("fill", "type", getLinkColor),
+			),
+			$(go.TextBlock, { // from info
+					font: "Italic 7pt Sans-Serif",
+				},
+				new go.Binding("text", "fromInfo").makeTwoWay()
+			),
+			new go.Binding("visible", "", (o) => !!o.fromInfo),
+		),
+		$(go.Panel, "Auto", { // to info
+				segmentIndex: 0,
+				segmentOffset: new go.Point(NaN, NaN),
+				segmentOrientation: 21, // go.Orientation,
+			},
+			$(go.Shape, "RoundedRectangle", {
+					fill: "transparent",
+					stroke: "gray",
+				},
+				new go.Binding("fill", "type", getLinkColor),
+			),
+			$(go.TextBlock, { // from info
+					font: "Italic 7pt Sans-Serif",
+				},
+				new go.Binding("text", "toInfo").makeTwoWay()
+			),
+			new go.Binding("visible", "", (o) => !!o.toInfo),
+		),
+		// $(go.TextBlock,
+		// 	{
+		// 		textAlign: "center",
+		// 		font: "10pt helvetica, arial, sans-serif",
+		// 		stroke: "#333333",
+		// 		editable: true,
+		// 		background: "white"
+		// 	},
+		// 	new go.Binding("text", "text").makeTwoWay()
+		// )
+	);
+
+	// Event-Listener für Rechtsklick auf Hintergrund
+	diagram.addDiagramListener("BackgroundContextClicked", function(e) {
+		const point = e.diagram.lastInput.documentPoint;
+		createNodeAtPoint(point);
+	});
+
+	// Event-Listener für Rechtsklick auf Objekte (Nodes/Groups)
+	diagram.addDiagramListener("ObjectContextClicked", function(e) {
+		const obj = e.subject.part;
+		if (obj instanceof go.Node || obj instanceof go.Group) {
+			deleteNodeWithConfirmation(obj);
+		}
+	});
+
+	// Linking-Tool anpassen für automatische Link-Typen
+	diagram.toolManager.linkingTool.insertLink = function(fromnode, fromport, tonode, toport) {
+		const newlink = go.LinkingTool.prototype.insertLink.call(this, fromnode, fromport, tonode, toport);
+		if (newlink !== null) {
+			const model = diagram.model;
+			model.setDataProperty(newlink.data, "type", selectedLinkType);
+		}
+		return newlink;
+	};
+
+	// Zentrale Datenstruktur für Node-Eigenschaften
+	const NODE_STYLES = {
+		'default': {
+			icon: '❓',
+			fill: '#F5F5F5',
+			stroke: '#757575',
+			titleColor: '#424242'
+		},
+		'group': {
+			icon: '📁',
+			fill: '#E3F2FD',
+			stroke: '#1976D2',
+			titleColor: '#1565C0'
+		},
+		'modul': {
+			icon: '⚙️',
+			fill: '#E8EAF6',
+			stroke: '#3F51B5',
+			titleColor: '#303F9F'
+		},
+		'api': {
+			icon: '🔗',
+			fill: '#E8F5E8',
+			stroke: '#388E3C',
+			titleColor: '#2E7D32'
+		},
+		'app': {
+			icon: '📱',
+			fill: '#FFF3E0',
+			stroke: '#F57C00',
+			titleColor: '#EF6C00'
+		},
+		'cron': {
+			icon: '⏰',
+			fill: '#FCE4EC',
+			stroke: '#C2185B',
+			titleColor: '#AD1457'
+		},
+		'daemon': {
+			icon: '👹',
+			fill: '#F1F8E9',
+			stroke: '#689F38',
+			titleColor: '#558B2F'
+		},
+		'script': {
+			icon: '📜',
+			fill: '#E0F2F1',
+			stroke: '#00695C',
+			titleColor: '#00838F'
+		},
+	};
+
+	// Zentrale Datenstruktur für Link-Eigenschaften
+	const LINK_STYLES = {
+		'default': {
+			icon: '➡️',
+			color: '#000000',
+			width: 3,
+			toArrow: 'Standard',
+			fromArrow: '',
+		},
+
+		'data': {
+			icon: '➡️',
+			color: '#2196F3',
+			width: 3,
+			toArrow: 'Standard',
+			fromArrow: '',
+		},
+		'control': {
+			icon: '🎮',
+			color: '#9C27B0',
+			width: 3,
+			toArrow: 'Triangle',
+			fromArrow: '',
+		},
+		'trigger': {
+			icon: '⚡',
+			color: '#FF9800',
+			width: 3,
+			toArrow: 'OpenTriangle',
+			fromArrow: '',
+		},
+		'dependency': {
+			icon: '🔗',
+			color: '#E91E63',
+			width: 3,
+			toArrow: 'Standard',
+			fromArrow: 'BackwardSemiCircle',
+		},
+	};
+
+	// Funktionen für Node-Eigenschaften
+	function getNodeColor(type) {
+		return (NODE_STYLES[type] || NODE_STYLES.default).fill;
+	}
+
+	function getNodeStroke(type) {
+		return (NODE_STYLES[type] || NODE_STYLES.default).stroke;
+	}
+
+	function getNodeTitleColor(type) {
+		return (NODE_STYLES[type] || NODE_STYLES.default).titleColor;
+	}
+
+	function getNodeIcon(type) {
+		return (NODE_STYLES[type] || NODE_STYLES.default).icon;
+	}
+
+	// Funktionen für Link-Eigenschaften
+	function getLinkColor(type) {
+		return (LINK_STYLES[type] || LINK_STYLES.default).color;
+	}
+
+	function getLinkWidth(type) {
+		return (LINK_STYLES[type] || LINK_STYLES.default).width;
+	}
+
+	function getLinkToArrow(type) {
+		return (LINK_STYLES[type] || LINK_STYLES.default).toArrow;
+	}
+
+	function getLinkFromArrow(type) {
+		return (LINK_STYLES[type] || LINK_STYLES.default).fromArrow;
+	}
+
+	function getLinkRouting(type) {
+		return (LINK_STYLES[type] || LINK_STYLES.default).routing;
+	}
+
+	function getLinkIcon(type) {
+		return (LINK_STYLES[type] || LINK_STYLES.default).icon;
+	}
+
+	// Hilfsfunktionen
+	function setNodeType(event, type) {
+		selectedNodeType = type;
+		// Visuelles Feedback
+		document.querySelectorAll('.node-type').forEach(el => {
+			el.style.fontWeight = 'normal';
+		});
+		event.target.style.fontWeight = 'bold';
+	}
+
+	function setLinkType(event, type) {
+		selectedLinkType = type;
+		// Visuelles Feedback
+		document.querySelectorAll('.link-type').forEach(el => {
+			el.style.fontWeight = 'normal';
+		});
+		event.target.style.fontWeight = 'bold';
+	}
+
+	function createNodeAtPoint(point) {
+		diagram.startTransaction("create node");
+		const data = {
+			key: "Node" + Date.now(), // Eindeutige ID
+			title: selectedNodeType.charAt(0).toUpperCase() + selectedNodeType.slice(1),
+			description: "Neue " + selectedNodeType + " Beschreibung hier eingeben...",
+			type: selectedNodeType,
+			loc: go.Point.stringify(point)
+		};
+
+		if (selectedNodeType === 'group') {
+			data.isGroup = true;
+			data.description = "Gruppe für zusammengehörige Komponenten";
+		}
+
+		diagram.model.addNodeData(data);
+		diagram.commitTransaction("create node");
+	}
+
+	function deleteNodeWithConfirmation(node) {
+		const nodeData = node.data;
+		const nodeName = nodeData.title || nodeData.text || "diese Node";
+		const nodeType = nodeData.type || "Element";
+
+		if (confirm(`Möchten Sie ${nodeType} "${nodeName}" wirklich löschen?`)) {
+			diagram.startTransaction("delete node");
+			diagram.remove(node);
+			diagram.commitTransaction("delete node");
+		}
+	}
+
+	// Beispieldaten hinzufügen
+	diagram.model = new go.GraphLinksModel([
+		{
+			key: "G1",
+			title: "Hauptgruppe",
+			description: "Container für alle Hauptkomponenten des Systems",
+			type: "group",
+			isGroup: true
+		},
+		{
+			key: "A1",
+			title: "Web API",
+			description: "REST API für externe Clients mit Authentication und Rate Limiting",
+			type: "api",
+			group: "G1"
+		},
+		{
+			key: "M1",
+			title: "Datenverarbeitung",
+			description: "Zentraler Service für die Verarbeitung und Transformation von Eingangsdaten",
+			type: "modul",
+			group: "G1"
+		},
+		{
+			key: "A2",
+			title: "Mobile App",
+			description: "React Native App für iOS und Android mit Offline-Synchronisation",
+			type: "app"
+		},
+		{
+			key: "C1",
+			title: "Backup Cron",
+			description: "Tägliche automatische Datensicherung um 2:00 Uhr nachts",
+			type: "cron"
+		},
+		{
+			key: "D1",
+			title: "Monitor Daemon",
+			description: "Überwacht Systemressourcen und sendet Alerts bei kritischen Zuständen",
+			type: "daemon"
+		},
+		{
+			key: "S1",
+			title: "Deploy Script",
+			description: "Automatisiertes Deployment-Script mit Rollback-Funktionalität für Production",
+			type: "script"
+		}
+	], [
+		{ from: "A2", to: "A1", type: "data", text: "HTTP Requests", fromInfo: "IBAN Prüfung", toInfo: 'GET /ibans' },
+		{ from: "A1", to: "M1", type: "control", text: "Verarbeitung" },
+		{ from: "C1", to: "M1", type: "trigger" },
+		{ from: "D1", to: "A1", type: "dependency", fromInfo: "überwacht" }
+	]);
+
+	// Standard-Auswahl setzen
+	document.addEventListener('DOMContentLoaded', function() {
+		// Initial die erste Auswahl markieren
+		const firstNodeType = document.querySelector('.node-type');
+		const firstLinkType = document.querySelector('.link-type');
+		if (firstNodeType) firstNodeType.style.fontWeight = 'bold';
+		if (firstLinkType) firstLinkType.style.fontWeight = 'bold';
+	});
+</script>
+</body>
+</html>
