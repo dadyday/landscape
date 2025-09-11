@@ -63,10 +63,20 @@ export const nodeStyles = {
     titleColor: '#558B2F'
   },
   'script': {
-    icon: '📜',
+    icon: 'mdi:script-text-play-outline #00695C', //'📜',
     fill: '#E0F2F1',
     stroke: '#00695C',
     titleColor: '#00838F'
+  },
+  'db': {
+    icon: 'mdi:database orange',
+    label: 'DB',
+    color: '#f8c'
+  },
+  'file': {
+    icon: '📁',
+    label: 'Filestore',
+    color: '#f88'
   },
 };
 
@@ -81,7 +91,7 @@ export const linkStyles = {
     strokeDashArray: []
   },
 
-  'data': {
+  'request': {
     icon: '➡️',
     color: '#2196F3',
     width: 3,
@@ -96,7 +106,7 @@ export const linkStyles = {
     fromArrow: '',
     strokeDashArray: [4]
   },
-  'trigger': {
+  'notify': {
     icon: '⚡',
     color: '#FF9800',
     width: 3,
@@ -115,4 +125,9 @@ export const linkStyles = {
 export function linkProp(link, prop) {
   const style = linkStyles[link?.type] ?? []
   return style[prop] || linkStyles.default[prop] || null
+}
+
+export function nodeProp(node, prop) {
+  const style = nodeStyles[node?.type] ?? []
+  return style[prop] || nodeStyles.default[prop] || null
 }

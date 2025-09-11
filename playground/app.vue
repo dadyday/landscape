@@ -7,20 +7,24 @@
 </template>
 
 <script setup>
+
 const data = ref([
   [ // a JavaScript Array of JavaScript objects, one per node;
-    // the "color" property is added specifically for this app
-    { key: 1, title: "Alpha", color: "lightblue" },
-    { key: 2, title: "Beta", color: "orange" },
-    { key: 3, title: "Gamma", color: "lightgreen" },
-    { key: 4, title: "Delta", color: "pink" }
+    { key: 1, type: "modul", title: "Module" },
+    { key: 2, type: "api", title: "Api" },
+    { key: 3, type: "app", title: "UI" },
+    { key: 4, type: "cron", title: "process" },
+    { key: 7, type: "daemon", title: "consumer" },
+    { key: 8, type: "script", title: "cleanup" },
+    { key: 5, type: "db", title: "Database" },
+    { key: 6, type: "file", title: "Filestore" },
   ],
   [ // a JavaScript Array of JavaScript objects, one per link
-    { from: 1, to: 2, type: 'data'},
-    { from: 1, to: 3, type: 'control'},
-    { from: 2, to: 2, type: ''},
-    { from: 3, to: 4, type: null},
-    { from: 4, to: 1 }
+    { type: 'request', from: 1, to: 2 },
+    { type: 'dependency', from: 4, to: 1 },
+    { type: '', from: 2, to: 2 },
+    { type: 'request', from: 3, to: 1 },
+    { type: 'request', from: 3, to: 2 },
   ],
 ])
 
