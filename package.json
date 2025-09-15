@@ -35,7 +35,8 @@
   },
   "dependencies": {
     "@nuxt/kit": "^4.1.1",
-    "gojs": "^3.0.26"
+    "gojs": "^3.0.26",
+    "nuxt-lodash": "^2.5.3"
   },
   "devDependencies": {
     "@nuxt/devtools": "^2.6.3",

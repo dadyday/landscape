@@ -1,93 +1,58 @@
 <script setup lang="ts">
 import Diagram from './diagram'
-import go from 'gojs'
-import { linkProp, nodeProp } from './styles'
+import go, {type ObjectData} from 'gojs'
+import {nodeStyles, linkStyles} from './styles'
 
 const diagramDiv = ref()
 const el = useTemplateRef('diagramDiv')
 
-const data = defineModel<[[],[]]>()
+const data = defineModel<[ObjectData[],ObjectData[]]>()
 
-function loadIcon(node, obj) {
-  const icon = nodeProp(node, 'icon')
-  const [_,lib,name, color] = icon?.match(/^([\w-]+):([\w-]+)\s*(.+)?$/) ?? []
-  if (!name) {
-    obj.text = icon
-  }
-  else {
-    // const p = 'F M2.6582600000000003 6.65405 C2.38581 8.738150000000001 2.22032 10.85575 2.16746 13.00145 C5.06344 14.21045 7.81786 15.690949999999999 10.39893 17.41105 C12.98003 15.690949999999999 15.73443 14.21045 18.63043 13.00145 C18.57753 10.85585 18.41203 8.738150000000001 18.13963 6.65415 M2.6582600000000003 6.65405 C1.78255 6.35975 0.89622 6.088520000000001 0 5.841150000000001 C3.2453900000000004 3.5663199999999997 6.72634 1.60465 10.39893 0 C14.07163 1.60465 17.55253 3.5663300000000002 20.79793 5.84116 C19.90173 6.08854 19.01533 6.359780000000001 18.13963 6.65415 M2.6582600000000003 6.65405 C5.34549 7.55735 7.932729999999999 8.67835 10.39903 9.99605 C12.86523 8.67835 15.45243 7.55735 18.13963 6.65415 M5.14893 11.50745 C5.56314 11.50745 5.89893 11.17165 5.89893 10.75745 C5.89893 10.343250000000001 5.56314 10.00745 5.14893 10.00745 C4.73472 10.00745 4.39893 10.343250000000001 4.39893 10.75745 C4.39893 11.17165 4.73472 11.50745 5.14893 11.50745z M5.14893 11.50745 L5.14893 7.831950000000001 C6.840400000000001 6.780950000000001 8.59253 5.818390000000001 10.39893 4.95074 M3.3915699999999998 16.500049999999998 C4.56314 15.328550000000002 5.14893 13.79295 5.14893 12.25745 L5.14893 10.75745'
-    // trg.geometry = go.Geometry.parse(p, true)
-    fetch("http://localhost:3000/api/_nuxt_icon/mdi.json?icons="+name)
-      .then(res => {
-        res.json().then((json) => {
-          const path = json.icons[name].body.match(/d="(.*)"/)[1]
-          // console.log(path)
-          obj.geometry = go.Geometry.parse(path, true)
-          obj.visible = true
-          obj.fill = color
-        })
-      })
-  }
-}
+const diagram = Diagram()
 
-const nodeTemplate = new go.Node("Auto")
-  .add(
-    new go.Shape("RoundedRectangle")
-      .bind('', '', (node, obj) => {
-        obj.stroke = nodeProp(node, 'stroke')
-        obj.fill = nodeProp(node, 'fill')
-      }),
-    new go.Panel('Horizontal', { margin: 10 })
-      .add(
-        new go.TextBlock({
-          text: '',
-        })
-          .bind('', '', loadIcon),
-        new go.Shape({
-            alignment: new go.Spot(0, 0),
-            margin: new go.Margin(-1, 3, 0, 0),
-            height: 12,
-            width: 12,
-            fill: 'black',
-            strokeWidth: 0,
-            visible: false,
-          })
-          .bind('', '', loadIcon),
-        new go.TextBlock({
-          })
-          .bind('text', 'title'),
-      )
-  )
-
-const linkTemplate = new go.Link()
-  .add(
-    new go.Shape({ strokeWidth: 2 })
-      .bind('', '', (link, obj) => {
-        obj.stroke = linkProp(link, 'color')
-        obj.strokeDashArray = linkProp(link, 'strokeDashArray') || []
-      }),
-    new go.Shape({ strokeWidth: 1, scale: 1 })
-      .bind('', '', (link, obj) => {
-        obj.stroke = linkProp(link, 'color')
-        obj.fill = linkProp(link, 'color')
-        obj.fromArrow = linkProp(link, 'fromArrow') || ''
-      }),
-    new go.Shape({ strokeWidth: 1, scale: 1 })
-      .bind('', '', (link, obj) => {
-        obj.stroke = linkProp(link, 'color')
-        obj.fill = linkProp(link, 'color')
-        obj.toArrow = linkProp(link, 'toArrow') || ''
-      }),
-  )
-
-const diagram = Diagram({
-  nodeTemplate,
-  linkTemplate,
+const selectedNode = ref<ObjectData>()
+const selectedLink = ref<ObjectData>()
+diagram.addDiagramListener('ChangedSelection', (ev) => {
+  const obj = ev.subject.first() || null
+  selectedNode.value = obj instanceof go.Node ? obj?.data : undefined
+  selectedLink.value = obj instanceof go.Link ? obj?.data : undefined
 })
+watchEffect(() => {
+  if (selectedNode.value || selectedLink.value) {
+    diagram.updateAllRelationshipsFromData()
+    diagram.updateAllTargetBindings()
+  }
+})
+
+const linkTargets = computed(() => data.value?.[0].map((item) => ({
+    id: item.key,
+    label: item.title,
+    icon: nodeStyles[item.type]?.icon,
+  })
+))
+
+const tags = computed(() => {
+  const tags = new Set<string>()
+  const addTags = (item: ObjectData) => {
+    item.tags?.forEach((tag: string) => tags.add(tag))
+  }
+  data.value?.[1].forEach(addTags)
+  data.value?.[0].forEach(addTags)
+  return Array.from(tags)
+})
+
+const filterTags = ref(['foo'])
+watch(filterTags, () => {
+  data.value?.[0].forEach((item: ObjectData) => {
+    item.hidden = filterTags.value.length > 0 && !filterTags.value.some((tag) => item.tags?.includes(tag))
+  })
+  diagram.updateAllRelationshipsFromData()
+  diagram.updateAllTargetBindings()
+}, { immediate: true })
 
 onMounted(() => {
   diagram.div = el.value as HTMLDivElement
-  diagram.model = new go.GraphLinksModel(data.value[0] ?? [], data.value[1] ?? [])
+  diagram.model = new go.GraphLinksModel(data.value?.[0] ?? [], data.value?.[1] ?? [])
   // loadData()
 })
 </script>
@@ -95,14 +60,62 @@ onMounted(() => {
 <template>
   <div>
     Landscape
-    <div ref="diagramDiv" class="diagram"></div>
+    <div class="row">
+      <FieldSelectMulti v-model="filterTags" :options="tags" label="Tags" width="50%" />
+    </div>
+    <div class="row">
+      <div ref="diagramDiv" class="diagram"></div>
+      <Transition>
+        <div v-if="selectedNode || selectedLink" class="slide">
+          <div v-if="selectedNode" class="col">
+            <FieldSelect v-model="selectedNode.type" :options="nodeStyles" label="Type" width="50%" />
+            <FieldSelectMulti v-model="selectedNode.tags" :options="tags" label="Tags" width="50%" />
+            <UInput v-model="selectedNode.title" label="Name" width="100%" />
+            <UTextarea v-model="selectedNode.text" label="Beschreibung" divs="2" width="100%" />
+          </div>
+          <div v-if="selectedLink" class="col">
+            <FieldSelect v-model="selectedLink.type" :options="linkStyles" label="Type" width="50%" />
+            <FieldSelect v-model="selectedLink.from" :options="linkTargets" label="Von" width="50%" />
+            <FieldSelect v-model="selectedLink.to" :options="linkTargets" label="Zu" width="50%" />
+            <FieldSelectMulti v-model="selectedLink.tags" :options="tags" label="Tags" width="50%" />
+            <UInput v-model="selectedLink.title" label="Name" width="100%" />
+            <UTextarea v-model="selectedLink.text" label="Beschreibung" divs="2" width="100%" />
+          </div>
+        </div>
+      </Transition>
+    </div>
+
   </div>
 </template>
 
 <style scoped>
+@import "tailwindcss";
+
 .diagram {
   width: 100%;
-  height: 400px;
+  height: 600px;
   background-color: #DAE4E4;
+}
+.row {
+  @apply flex flex-row gap-4 items-stretch;
+}
+.slide {
+  width: 33%;
+}
+.col {
+  @apply flex flex-col gap-4;
+}
+
+.v-enter-active {
+  transition: width 0.5s ease;
+}
+
+.v-leave-active {
+  transition: width 0.5s ease;
+}
+
+.v-enter-from,
+.v-leave-to {
+  width: 0;
 }
 </style>

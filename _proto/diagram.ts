@@ -64,19 +64,18 @@ export default (): go.Diagram => {
     //
     // mouseDrop:                        stopDrag,
     'draggingTool.isGridSnapEnabled': true,
-    'undoManager.isEnabled':          true,
     maxSelectionCount:                1,
   })
-  
+
   diagram.grid = new go.Panel('Grid', { gridCellSize: new go.Size(10, 10) })
     .add(
       new go.Shape('LineH', { strokeWidth: 0.2, strokeDashArray: [1, 9] }),
       // new go.Shape('LineH', { stroke: 'lightgray', strokeWidth: 0.5 }),
       // new go.Shape('LineV', { stroke: 'lightgray', strokeWidth: 0.5 }),
     )
-  
+
   diagram.routers.add(new AvoidsLinksRouter())
-  
+
   diagram.groupTemplate = new go.Group('Vertical', {
     locationSpot:              go.Spot.Center,
     padding:                   5,
@@ -106,7 +105,7 @@ export default (): go.Diagram => {
           new go.Placeholder({ padding: 5 }),
         ),
     )
-  
+
   diagram.nodeTemplate = new go.Node('Auto', {
     // locationSpot:        go.Spot.Center,
     // locationObjectName:  'BODY',
@@ -138,8 +137,8 @@ export default (): go.Diagram => {
             .bindTwoWay('text', 'title'),
         ),
     )
-  
-  
+
+
   diagram.linkTemplate = new go.Link({
     // routing:        go.Routing.Orthogonal,
     routing:    go.Routing.Orthogonal, // AvoidsNodes,
@@ -147,17 +146,17 @@ export default (): go.Diagram => {
     corner:     4,
     mouseEnter: (e, link) => link.elt(0).strokeWidth = 2.5,
     mouseLeave: (e, link) => link.elt(0).strokeWidth = 1.5,
-    
+
     fromSpot:             go.Spot.RightSide,
     fromEndSegmentLength: 16,
     fromShortLength:      4,
     relinkableFrom:       true,
-    
+
     toSpot:             go.Spot.LeftSide,
     toEndSegmentLength: 16,
     toShortLength:      4,
     relinkableTo:       true,
-    
+
     reshapable:    true,
     resegmentable: true,
   })
@@ -180,13 +179,13 @@ export default (): go.Diagram => {
           obj.toArrow = linkTypes[link?.type]?.toArrow || 'Triangle'
         }),
     )
-  
+
   // Event-Listener für Rechtsklick auf Hintergrund
   diagram.addDiagramListener('BackgroundContextClicked', function (e) {
     const point = e.diagram.lastInput.documentPoint
     createNodeAtPoint(point)
   })
-  
+
   // Event-Listener für Rechtsklick auf Objekte (Nodes/Groups)
   diagram.addDiagramListener('ObjectContextClicked', function (e) {
     const point = e.diagram.lastInput.documentPoint
@@ -194,10 +193,10 @@ export default (): go.Diagram => {
     if (obj instanceof go.Group) {
       createNodeAtPoint(point, obj)
     }
-    
+
   })
-  
-  
+
+
   function createNodeAtPoint(point, group = null) {
     diagram.startTransaction('create node')
     const data = {
@@ -208,11 +207,11 @@ export default (): go.Diagram => {
       group:       group,
       loc:         go.Point.stringify(point),
     }
-    
+
     diagram.model.addNodeData(data)
     diagram.commitTransaction('create node')
   }
-  
+
   return diagram
 }
 

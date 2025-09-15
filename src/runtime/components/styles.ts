@@ -1,133 +1,120 @@
 
 
-export const nodeTypes = {
-  server: { label: 'Server', color: '#444' },
-  app:    { label: 'App', color: '#cfc' },
-  api:    { label: 'API', color: '#ccf' },
-  module: { label: 'Module', color: '#fc8' },
-  cron:   { label: 'Cronjob', color: '#ff8' },
-  daemon: { label: 'Daemon', color: '#8fc' },
-  db:     { label: 'DB', color: '#f8c' },
-  file:   { label: 'Filestore', color: '#f88' },
-}
 
-export const linkTypes = {
-  include: { label: 'Include', color: '#880', fromArrow: 'Circle', strokeDashArray: [4] },
-  api:     { label: 'Api', color: '#048', fromArrow: 'StretchedDiamond' },
-  notify:  { label: 'Notify', color: '#084' },
-  message: { label: 'Message', color: '#800' },
-  read:    { label: 'Read', color: '#840' },
-}
 
-export const nodeStyles = {
+
+export const nodeStyles:Partial<any> = {
   'default': {
+    label: '...',
     icon: '❓',
     fill: '#F5F5F5',
     stroke: '#757575',
     titleColor: '#424242'
   },
-  'group': {
+  'server': {
+    label: 'Server',
     icon: '📁',
     fill: '#E3F2FD',
     stroke: '#1976D2',
     titleColor: '#1565C0'
   },
   'modul': {
+    label: 'Modul',
     icon: '⚙️',
     fill: '#E8EAF6',
     stroke: '#3F51B5',
     titleColor: '#303F9F'
   },
   'api': {
+    label: 'API',
     icon: '🔗',
     fill: '#E8F5E8',
     stroke: '#388E3C',
     titleColor: '#2E7D32'
   },
   'app': {
+    label: 'Application',
     icon: '📱',
     fill: '#FFF3E0',
     stroke: '#F57C00',
     titleColor: '#EF6C00'
   },
   'cron': {
+    label: 'Cronjob',
     icon: '⏰',
     fill: '#FCE4EC',
     stroke: '#C2185B',
     titleColor: '#AD1457'
   },
   'daemon': {
+    label: 'Daemon',
     icon: '👹',
     fill: '#F1F8E9',
     stroke: '#689F38',
     titleColor: '#558B2F'
   },
   'script': {
+    label: 'Script',
     icon: 'mdi:script-text-play-outline #00695C', //'📜',
     fill: '#E0F2F1',
     stroke: '#00695C',
     titleColor: '#00838F'
   },
   'db': {
+    label: 'Database',
     icon: 'mdi:database orange',
-    label: 'DB',
     color: '#f8c'
   },
   'file': {
-    icon: '📁',
     label: 'Filestore',
+    icon: '📁',
     color: '#f88'
   },
 };
 
 // Zentrale Datenstruktur für Link-Eigenschaften
-export const linkStyles = {
+export const linkStyles: Partial<any> = {
   'default': {
+    label: '...',
     icon: '➡️',
     color: '#000',
-    width: 3,
     toArrow: 'Standard',
-    fromArrow: '',
-    strokeDashArray: []
   },
 
   'request': {
+    label: 'Request',
     icon: '➡️',
     color: '#2196F3',
-    width: 3,
     toArrow: 'Standard',
-    fromArrow: '',
   },
   'control': {
+    label: 'Control',
     icon: '🎮',
     color: '#9C27B0',
-    width: 3,
     toArrow: 'Triangle',
-    fromArrow: '',
     strokeDashArray: [4]
   },
   'notify': {
+    label: 'Notify',
     icon: '⚡',
     color: '#FF9800',
-    width: 3,
     toArrow: 'OpenTriangle',
-    fromArrow: '',
   },
   'dependency': {
+    label: 'Depends',
     icon: '🔗',
     color: '#E91E63',
-    width: 3,
-    toArrow: 'Standard',
+    toArrow: 'Circle',
     fromArrow: 'BackwardSemiCircle',
   },
 };
 
-export function linkProp(link, prop) {
+export function linkProp(link: go.ObjectData, prop: string) {
   const style = linkStyles[link?.type] ?? []
-  return style[prop] || linkStyles.default[prop] || null
+  return style?.[prop] || linkStyles?.default?.[prop] || null
 }
 
-export function nodeProp(node, prop) {
+export function nodeProp(node: go.ObjectData, prop: string) {
   const style = nodeStyles[node?.type] ?? []
-  return style[prop] || nodeStyles.default[prop] || null
+  return style?.[prop] || nodeStyles.default?.[prop] || null
 }
