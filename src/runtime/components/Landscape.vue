@@ -2,6 +2,7 @@
 import Diagram from './diagram'
 import go, {type ObjectData} from 'gojs'
 import {nodeStyles, linkStyles} from './styles'
+import {sleep} from "@antfu/utils";
 
 const diagramDiv = ref()
 const el = useTemplateRef('diagramDiv')
@@ -9,6 +10,13 @@ const el = useTemplateRef('diagramDiv')
 const data = defineModel<[ObjectData[],ObjectData[]]>()
 
 const diagram = Diagram()
+function refreshDiagram() {
+  // diagram.model = new go.GraphLinksModel(data.value?.[0] ?? [], data.value?.[1] ?? [])
+  // diagram.layout.invalidateLayout();
+  diagram.updateAllRelationshipsFromData();
+  diagram.updateAllTargetBindings();
+  // diagram.requestUpdate();
+}
 
 const selectedNode = ref<ObjectData>()
 const selectedLink = ref<ObjectData>()
@@ -19,8 +27,7 @@ diagram.addDiagramListener('ChangedSelection', (ev) => {
 })
 watchEffect(() => {
   if (selectedNode.value || selectedLink.value) {
-    diagram.updateAllRelationshipsFromData()
-    diagram.updateAllTargetBindings()
+    refreshDiagram()
   }
 })
 
@@ -40,15 +47,37 @@ const tags = computed(() => {
   data.value?.[0].forEach(addTags)
   return Array.from(tags)
 })
+function attachFilter(filterTags: string[] = []) {
+  diagram.startTransaction()
+  data.value?.[0].forEach((item: ObjectData) => {
+    item.hidden = filterTags.length > 0 && !filterTags.some((tag) => item.tags?.includes(tag))
+  })
+  diagram.commitTransaction()
+}
 
 const filterTags = ref(['foo'])
 watch(filterTags, () => {
-  data.value?.[0].forEach((item: ObjectData) => {
-    item.hidden = filterTags.value.length > 0 && !filterTags.value.some((tag) => item.tags?.includes(tag))
-  })
-  diagram.updateAllRelationshipsFromData()
-  diagram.updateAllTargetBindings()
+  attachFilter(filterTags.value)
+  refreshDiagram()
 }, { immediate: true })
+
+
+async function loadData() {
+  data.value = await $fetch('/api/landscape')
+  // if (data.value !instanceof Array) return
+  sleep(1).then(() => { // works only desynced
+    attachFilter(filterTags.value)
+    diagram.model = new go.GraphLinksModel(data.value?.[0] ?? [], data.value?.[1] ?? [])
+    diagram.layoutDiagram(true)
+  })
+}
+
+async function saveData() {
+  await $fetch('/api/landscape', {
+    method: 'POST',
+    body: data.value,
+  })
+}
 
 onMounted(() => {
   diagram.div = el.value as HTMLDivElement
@@ -61,7 +90,9 @@ onMounted(() => {
   <div>
     Landscape
     <div class="row">
-      <FieldSelectMulti v-model="filterTags" :options="tags" label="Tags" width="50%" />
+      <UButton icon="mdi:file-upload-outline" label="Laden" @click="loadData" size="xs"></UButton>
+      <UButton icon="mdi:content-save-outline" label="Speichern" @click="saveData" size="xs"></UButton>
+      <FieldSelectMulti v-model="filterTags" :options="tags" width="50%" />
     </div>
     <div class="row">
       <div ref="diagramDiv" class="diagram"></div>
@@ -97,13 +128,13 @@ onMounted(() => {
   background-color: #DAE4E4;
 }
 .row {
-  @apply flex flex-row gap-4 items-stretch;
+  @apply flex flex-row gap-1 items-stretch m-1;
 }
 .slide {
   width: 33%;
 }
 .col {
-  @apply flex flex-col gap-4;
+  @apply flex flex-col gap-1;
 }
 
 .v-enter-active {

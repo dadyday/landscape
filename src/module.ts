@@ -1,4 +1,4 @@
-import { defineNuxtModule, addPlugin, createResolver, addComponentsDir } from '@nuxt/kit'
+import {defineNuxtModule, addPlugin, createResolver, addComponentsDir, addServerHandler} from '@nuxt/kit'
 
 // Module options TypeScript interface definition
 export interface ModuleOptions {}
@@ -18,6 +18,11 @@ export default defineNuxtModule<ModuleOptions>({
 
     addComponentsDir({
       path: resolver.resolve('./runtime/components')
+    })
+
+    addServerHandler({
+      route: '/api/landscape',
+      handler: resolver.resolve('./runtime/server/landscape'),
     })
   },
 })

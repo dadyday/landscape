@@ -73,6 +73,7 @@ const groupTemplate = new go.Group('Vertical', {
   )
 
 const nodeTemplate = new go.Node("Auto")
+  .bindTwoWay('location', 'loc', go.Point.parse, go.Point.stringify)
   .bind('', '', (node, obj) => {
     obj.opacity = node.hidden ? 0.1 : 1
   })

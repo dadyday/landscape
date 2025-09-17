@@ -15,7 +15,7 @@ const selectedItem = computed(() => items.value[selectedId.value])
 </script>
 
 <template>
-  <div>
+  <UFormField>
     <USelect
       v-model="selectedId"
       :items="Object.values(items)"
@@ -36,7 +36,7 @@ const selectedItem = computed(() => items.value[selectedId.value])
         </div>
       </template>
     </USelect>
-  </div>
+  </UFormField>
 </template>
 
 <style scoped>

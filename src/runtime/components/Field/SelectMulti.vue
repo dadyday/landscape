@@ -18,7 +18,7 @@ const items = computed(() => {
 </script>
 
 <template>
-  <div>
+  <UFormField>
     <UInputMenu
       v-model="selectedItems"
       v-model:search-term="searchTerm"
@@ -27,7 +27,7 @@ const items = computed(() => {
       class="w-full"
     >
     </UInputMenu>
-  </div>
+  </UFormField>
 </template>
 
 <style scoped>
