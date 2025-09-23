@@ -37,15 +37,15 @@ export default (options: go.DiagramInitOptions = {}): go.Diagram => {
   // groupTemplate.mouseDrop = stopDrag // (e, nod) => finishDrop(e, nod),
 
   const diagram =  new go.Diagram({
-    // 'undoManager.isEnabled':                true,
-    // 'clickCreatingTool.archetypeNodeData':  { title: 'Neue Node', text: '', type: '' },
+    'undoManager.isEnabled':                true,
+    'clickCreatingTool.archetypeNodeData':    { title: 'Neue Node', type: '' },
     // 'commandHandler.memberValidation':      (group, node) => !(node instanceof go.Group),
     // 'commandHandler.archetypeGroupData':    { isGroup: true, title: 'Neuer Server', type: 'server' },
     // mouseDrop:                           stopDrag,
-    // 'draggingTool.isGridSnapEnabled':       true,
-    // 'maxSelectionCount':                    1,
-    // "linkingTool.direction": go.LinkingTool.ForwardsOnly,
-    // "linkingTool.portGravity": 20,
+    'draggingTool.isGridSnapEnabled':       true,
+    'maxSelectionCount':                    1,
+    "linkingTool.direction": go.LinkingTool.ForwardsOnly,
+    "linkingTool.portGravity": 20,
     // "draggingTool.dragsTree": false,
     // "commandHandler.deletesTree": false,
     // layout: new go.Layout,
@@ -124,9 +124,9 @@ export default (options: go.DiagramInitOptions = {}): go.Diagram => {
     const data = {
       title:       'New Node',
       description: '',
-      type:        'server',
+      type:        group ? 'server' : 'default',
       isGroup:     !group,
-      group:       group,
+      group:       group?.key,
       loc:         go.Point.stringify(point),
     }
 

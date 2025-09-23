@@ -38,7 +38,7 @@ function normalizeOptions(options: Options): Options {
   const items = options instanceof Array ? options : Object.entries(options).map(([id, item]) => ({ ...item, id }))
   return items.reduce((result: Options, item: Scalar|Option, index: number) => {
     if (typeof item !== 'object') {
-      item = { id: index, label: item } satisfies Option
+      item = { id: item, label: item } satisfies Option
     }
     item.icon = normalizeIcon(item.icon) ?? undefined
     item.id = item.id ?? item.value

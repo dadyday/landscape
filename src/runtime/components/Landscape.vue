@@ -24,11 +24,8 @@ diagram.addDiagramListener('ChangedSelection', (ev) => {
   const obj = ev.subject.first() || null
   selectedNode.value = obj instanceof go.Node ? obj?.data : undefined
   selectedLink.value = obj instanceof go.Link ? obj?.data : undefined
-})
-watchEffect(() => {
-  if (selectedNode.value || selectedLink.value) {
-    refreshDiagram()
-  }
+  if (!obj) refreshFilters()
+  else refreshDiagram()
 })
 
 const linkTargets = computed(() => data.value?.[0].map((item) => ({
@@ -37,6 +34,50 @@ const linkTargets = computed(() => data.value?.[0].map((item) => ({
     icon: nodeStyles[item.type]?.icon,
   })
 ))
+
+const groupTargets = computed(() => data.value?.[0].filter((item) => item.isGroup).map((item) => ({
+    id: item.key,
+    label: item.title,
+    icon: nodeStyles[item.type]?.icon,
+  })
+))
+
+// tag adding
+// ------------------------------------------------------
+const adding = ref(false)
+function toggleAdding() {
+  adding.value = !adding.value
+  refreshFilters()
+}
+const addingTag = ref('foo')
+function toggleTag(node: ObjectData) {
+  if (!adding.value || !addingTag.value) return
+  if (!node.tags) node.tags = []
+  if (node.tags.includes(addingTag.value)) {
+    node.tags = node.tags.filter((tag) => tag !== addingTag.value)
+  }
+  else {
+    node.tags.push(addingTag.value)
+  }
+}
+diagram.addDiagramListener('ObjectSingleClicked', (ev) => {
+  const obj = ev.subject
+  if (obj !instanceof go.Node) return
+  toggleTag(selectedNode.value)
+  refreshFilters()
+})
+watch(addingTag, refreshFilters, {})
+
+
+
+// tag filtering
+// ------------------------------------------------------
+const filtering = ref(false)
+function toggleFiltering() {
+  filtering.value = !filtering.value
+  adding.value = false
+  refreshFilters()
+}
 
 const tags = computed(() => {
   const tags = new Set<string>()
@@ -47,21 +88,30 @@ const tags = computed(() => {
   data.value?.[0].forEach(addTags)
   return Array.from(tags)
 })
+
 function attachFilter(filterTags: string[] = []) {
   diagram.startTransaction()
   data.value?.[0].forEach((item: ObjectData) => {
-    item.hidden = filterTags.length > 0 && !filterTags.some((tag) => item.tags?.includes(tag))
+    item.hidden = filtering.value || adding.value
+      ? filterTags.length > 0 && !filterTags.some((tag) => item.tags?.includes(tag))
+      : false
   })
   diagram.commitTransaction()
 }
 
-const filterTags = ref(['foo'])
-watch(filterTags, () => {
-  attachFilter(filterTags.value)
+function refreshFilters() {
+  const filters = adding.value ? [addingTag.value] : filterTags.value
+  attachFilter(filters)
   refreshDiagram()
-}, { immediate: true })
+}
+
+const filterTags = ref(['foo'])
+watch(filterTags, refreshFilters, { immediate: true })
 
 
+
+// load & save
+// ------------------------------------------------------
 async function loadData() {
   data.value = await $fetch('/api/landscape')
   // if (data.value !instanceof Array) return
@@ -89,28 +139,42 @@ onMounted(() => {
 <template>
   <div>
     Landscape
+    {{ filterTags.length }}
     <div class="row">
       <UButton icon="mdi:file-upload-outline" label="Laden" @click="loadData" size="xs"></UButton>
       <UButton icon="mdi:content-save-outline" label="Speichern" @click="saveData" size="xs"></UButton>
-      <FieldSelectMulti v-model="filterTags" :options="tags" width="50%" />
+      <UButtonGroup>
+        <FieldSelectMulti v-model="filterTags" :options="tags" width="20%" icon="mdi:tag-search-outline"/>
+        <UButton :variant="filtering && filterTags?.length ? 'solid' : 'subtle'" :disabled="!filterTags.length" icon="mdi:eye-outline" @click="toggleFiltering"></UButton>
+      </UButtonGroup>
+      <UButtonGroup>
+        <FieldSelect v-model="addingTag" :options="tags" width="20%" icon="mdi:tag-plus-outline"/>
+        <UButton :variant="adding ? 'solid' : 'subtle'" :disabled="!addingTag" icon="mdi:target" @click="toggleAdding"></UButton>
+      </UButtonGroup>
     </div>
     <div class="row">
-      <div ref="diagramDiv" class="diagram"></div>
+      <div ref="diagramDiv" class="diagram" :class="{ 'cursor-pointer': adding }"></div>
       <Transition>
         <div v-if="selectedNode || selectedLink" class="slide">
           <div v-if="selectedNode" class="col">
-            <FieldSelect v-model="selectedNode.type" :options="nodeStyles" label="Type" width="50%" />
-            <FieldSelectMulti v-model="selectedNode.tags" :options="tags" label="Tags" width="50%" />
-            <UInput v-model="selectedNode.title" label="Name" width="100%" />
-            <UTextarea v-model="selectedNode.text" label="Beschreibung" divs="2" width="100%" />
+            <FieldInput v-model="selectedNode.title" label="Name" />
+            <FieldSelect v-model="selectedNode.type" :options="nodeStyles" label="Type" />
+            <FieldSelect v-model="selectedNode.group" :options="groupTargets" label="Gehört zu" />
+            <UTextarea v-model="selectedNode.text" label="Beschreibung" divs="5" />
+            <FieldSelectMulti v-model="selectedNode.tags" :options="tags" label="Tags" @change="refreshFilters"/>
           </div>
           <div v-if="selectedLink" class="col">
-            <FieldSelect v-model="selectedLink.type" :options="linkStyles" label="Type" width="50%" />
-            <FieldSelect v-model="selectedLink.from" :options="linkTargets" label="Von" width="50%" />
-            <FieldSelect v-model="selectedLink.to" :options="linkTargets" label="Zu" width="50%" />
-            <FieldSelectMulti v-model="selectedLink.tags" :options="tags" label="Tags" width="50%" />
-            <UInput v-model="selectedLink.title" label="Name" width="100%" />
-            <UTextarea v-model="selectedLink.text" label="Beschreibung" divs="2" width="100%" />
+            <FieldInput v-model="selectedLink.label" label="Name" />
+            <FieldSelect v-model="selectedLink.type" :options="linkStyles" label="Type" />
+            <FieldRow label="Von - Zu">
+              <FieldSelect v-model="selectedLink.from" :options="linkTargets" />
+              <FieldSelect v-model="selectedLink.to" :options="linkTargets" />
+            </FieldRow>
+            <FieldRow>
+              <FieldInput v-model="selectedLink.fromLabel" />
+              <FieldInput v-model="selectedLink.toLabel" />
+            </FieldRow>
+            <UTextarea v-model="selectedLink.text" label="Beschreibung" divs="5" />
           </div>
         </div>
       </Transition>
@@ -126,6 +190,7 @@ onMounted(() => {
   width: 100%;
   height: 600px;
   background-color: #DAE4E4;
+
 }
 .row {
   @apply flex flex-row gap-1 items-stretch m-1;

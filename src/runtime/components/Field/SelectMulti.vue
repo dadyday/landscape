@@ -3,9 +3,13 @@
 
 import {normalizeOptions, type Options} from "./options";
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   options: string[],
-}>()
+  icon?: string,
+  width?: string,
+}>(),{
+  width: '100%',
+})
 
 //const items = computed(() => normalizeOptions(props.options))
 const selectedItems = defineModel({ default: () => [] as string[]})
@@ -24,7 +28,8 @@ const items = computed(() => {
       v-model:search-term="searchTerm"
       multiple
       :items
-      class="w-full"
+      :icon
+      class="w-full" :style="{ width }"
     >
     </UInputMenu>
   </UFormField>

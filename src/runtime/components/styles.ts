@@ -5,7 +5,7 @@
 
 export const nodeStyles:Partial<any> = {
   'default': {
-    label: '...',
+    label: 'Fragment',
     icon: '❓',
     fill: '#F5F5F5',
     stroke: '#757575',
@@ -14,7 +14,7 @@ export const nodeStyles:Partial<any> = {
   'server': {
     label: 'Server',
     icon: '📁',
-    fill: '#E3F2FD',
+    fill: '#E3F2FD80',
     stroke: '#1976D2',
     titleColor: '#1565C0'
   },
@@ -63,19 +63,23 @@ export const nodeStyles:Partial<any> = {
   'db': {
     label: 'Database',
     icon: 'mdi:database orange',
-    color: '#f8c'
+    fill: '#fec',
+    stroke: '#fc0',
+    titleColor: '#fc0'
   },
   'file': {
     label: 'Filestore',
     icon: '📁',
-    color: '#f88'
+    fill: '#fcc',
+    stroke: '#f88',
+    titleColor: '#f88'
   },
 };
 
 // Zentrale Datenstruktur für Link-Eigenschaften
 export const linkStyles: Partial<any> = {
   'default': {
-    label: '...',
+    label: 'Verbindung',
     icon: '➡️',
     color: '#000',
     toArrow: 'Standard',
@@ -95,13 +99,20 @@ export const linkStyles: Partial<any> = {
     strokeDashArray: [4]
   },
   'notify': {
-    label: 'Notify',
+    label: 'Message',
     icon: '⚡',
     color: '#FF9800',
     toArrow: 'OpenTriangle',
   },
+  'integration': {
+    label: 'Integration',
+    icon: '🔗',
+    color: '#888',
+    toArrow: 'OpenTriangle',
+    strokeDashArray: [8]
+  },
   'dependency': {
-    label: 'Depends',
+    label: 'Include',
     icon: '🔗',
     color: '#E91E63',
     toArrow: 'Circle',
