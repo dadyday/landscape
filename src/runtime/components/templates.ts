@@ -56,11 +56,13 @@ function bindIcon(node: Part) {
 
   const [_, lib, name, c] = icon?.match(/^([\w-]+):([\w-]+)\s*(.+)?$/) ?? []
   if (!name) symbol.text = icon
+    else if (icons[name]) glyph.geometry = icons[name]
   else {
-    if (icons[name]) glyph.geometry = icons[name]
     loadIcon(name).then((geom) => {
+        node.diagram?.commit(() => {
       glyph.geometry = icons[name] = geom
     })
+      })
     glyph.fill = c
     glyph.visible = true
   }
@@ -80,42 +82,44 @@ function bindNode(node: Part, obj: Partial<any>) {
 }
 
 function bindLink(link: Link, obj: Partial<any>) {
-  const color = linkProp(link.data, 'color')
-  const transp = makeTransparent(color, 0)
-  const fromNode = link.fromNode?.data
-  const toNode = link.toNode?.data
-  const fromArrow = link.findObject('fromArrow') as go.Shape
-  const toArrow = link.findObject('toArrow') as go.Shape
-  const fromText = link.findObject('fromText') as go.TextBlock
-  const toText = link.findObject('toText') as go.TextBlock
-  const midText = link.findObject('lineText') as go.TextBlock
+  link.diagram?.commit(() => {
+    const color = linkProp(link.data, 'color')
+    const transp = makeTransparent(color, 0)
+    const fromNode = link.fromNode?.data
+    const toNode = link.toNode?.data
+    const fromArrow = link.findObject('fromArrow') as go.Shape
+    const toArrow = link.findObject('toArrow') as go.Shape
+    const fromText = link.findObject('fromText') as go.TextBlock
+    const toText = link.findObject('toText') as go.TextBlock
+    const midText = link.findObject('lineText') as go.TextBlock
 
-  obj.fromShortLength = (fromArrow.fromArrow = linkProp(link.data, 'fromArrow') || '') ? 6 : 2
-  obj.toShortLength = (toArrow.toArrow = linkProp(link.data, 'toArrow') || '') ? 6 : 2
-  fromArrow.fill = toArrow.fill = color
-  obj.strokeDashArray = linkProp(link.data, 'strokeDashArray')
+    obj.fromShortLength = (fromArrow.fromArrow = linkProp(link.data, 'fromArrow') || '') ? 6 : 2
+    obj.toShortLength = (toArrow.toArrow = linkProp(link.data, 'toArrow') || '') ? 6 : 2
+    fromArrow.fill = toArrow.fill = color
+    obj.strokeDashArray = linkProp(link.data, 'strokeDashArray')
 
-  // obj.opacity = fromNode?.hidden && toNode?.hidden ? 0 : 1.0
-  obj.startColor = fromNode?.hidden ? transp : color
-  obj.midColor = transp
-  obj.endColor = toNode?.hidden ? transp : color
-  fromArrow.opacity = fromNode?.hidden ? 0.1 : 1.0
-  toArrow.opacity = toNode?.hidden ? 0.1 : 1.0
+    // obj.opacity = fromNode?.hidden && toNode?.hidden ? 0 : 1.0
+    obj.startColor = fromNode?.hidden ? transp : color
+    obj.midColor = transp
+    obj.endColor = toNode?.hidden ? transp : color
+    fromArrow.opacity = fromNode?.hidden ? 0.1 : 1.0
+    toArrow.opacity = toNode?.hidden ? 0.1 : 1.0
 
-  fromText.text = toText.text = midText.text = ''
-  if (!fromNode?.hidden && !toNode?.hidden) {
-    fromText.text = link.data?.fromLabel
-    toText.text = link.data?.toLabel
-    midText.text = link.data?.label
-  }
-  else if (!fromNode?.hidden) {
-    fromText.text = link.data?.fromLabel ?? link.data?.label
-  }
-  else if (!toNode?.hidden) {
-    toText.text = link.data?.toLabel ?? link.data?.label
-  }
+    fromText.text = toText.text = midText.text = ''
+    if (!fromNode?.hidden && !toNode?.hidden) {
+      fromText.text = link.data?.fromLabel
+      toText.text = link.data?.toLabel
+      midText.text = link.data?.label
+    }
+    else if (!fromNode?.hidden) {
+      fromText.text = link.data?.fromLabel ?? link.data?.label
+    }
+    else if (!toNode?.hidden) {
+      toText.text = link.data?.toLabel ?? link.data?.label
+    }
+    obj.updateBrush()
+  })
 
-  obj.updateBrush()
 }
 
 
@@ -166,6 +170,8 @@ const nodeTemplate = new go.Node("Auto", {
       portId: "",
       fromLinkable: true,
       toLinkable: true,
+      fromLinkableDuplicates: true,
+      toLinkableDuplicates: true,
     }),
     new go.Panel('Horizontal', {
       name: 'head',
@@ -193,21 +199,22 @@ const nodeTemplate = new go.Node("Auto", {
 
 
 const linkTemplate = new GradientLink({
-  // routing:    go.Routing.AvoidsNodes,
-  curve:        go.Curve.Bezier, // go.Curve.JumpGap,
-  // corner:     4,
+  // routing:              go.Routing.AvoidsNodes, // Normal AvoidsNodes,
+  curve:                go.Curve.Bezier, // Bezier JumpOver JumpGap
+  // corner:               10,
+  // curviness:            40,
   mouseEnter: (e, link) => link.elt(0).strokeWidth = 4,
   mouseLeave: (e, link) => link.elt(0).strokeWidth = 1.5,
 
-  // fromSpot:             go.Spot.LeftRightSides,
-  fromEndSegmentLength: 16,
+  //fromSpot:             go.Spot.LeftRightSides,
+  //fromEndSegmentLength: 10,
   fromShortLength:      6,
   relinkableFrom:       true,
   startColor:           'red',
   endColor:             'blue',
 
-  // toSpot:             go.Spot, // go.Spot.LeftSide,
-  toEndSegmentLength:   16,
+  // toSpot:               go.Spot.TopBottomSides, // go.Spot.LeftSide,
+  //toEndSegmentLength:   10,
   toShortLength:        6,
   relinkableTo:         true,
 

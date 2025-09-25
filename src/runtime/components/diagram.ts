@@ -1,6 +1,8 @@
 import go from 'gojs'
 import {merge} from "smob";
 import {groupTemplate, linkTemplate, nodeTemplate} from "./templates";
+import {AvoidsLinksRouter} from "./AvoidsLinksRouter";
+import {CurvedLinkReshapingTool} from "./CurvedLinkReshapingTool";
 
 // helper
 
@@ -46,6 +48,7 @@ export default (options: go.DiagramInitOptions = {}): go.Diagram => {
     'maxSelectionCount':                    1,
     "linkingTool.direction": go.LinkingTool.ForwardsOnly,
     "linkingTool.portGravity": 20,
+    linkReshapingTool: new CurvedLinkReshapingTool(),
     // "draggingTool.dragsTree": false,
     // "commandHandler.deletesTree": false,
     // layout: new go.Layout,
@@ -55,6 +58,7 @@ export default (options: go.DiagramInitOptions = {}): go.Diagram => {
 
     ...options
   })
+  // diagram.routers.add(new AvoidsLinksRouter());
 
   /*
   function createNodeAtPoint(point) {

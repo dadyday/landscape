@@ -18,6 +18,8 @@ function refreshDiagram() {
   // diagram.requestUpdate();
 }
 
+// Links
+
 const selectedNode = ref<ObjectData>()
 const selectedLink = ref<ObjectData>()
 diagram.addDiagramListener('ChangedSelection', (ev) => {
@@ -41,6 +43,16 @@ const groupTargets = computed(() => data.value?.[0].filter((item) => item.isGrou
     icon: nodeStyles[item.type]?.icon,
   })
 ))
+
+function swapLinkTargets() {
+  let tmp = selectedLink.value.from
+  selectedLink.value.from = selectedLink.value.to
+  selectedLink.value.to = tmp
+
+  tmp = selectedLink.value.fromText
+  selectedLink.value.fromText = selectedLink.value.toText
+  selectedLink.value.toText = tmp
+}
 
 // tag adding
 // ------------------------------------------------------
@@ -118,7 +130,9 @@ async function loadData() {
   sleep(1).then(() => { // works only desynced
     attachFilter(filterTags.value)
     diagram.model = new go.GraphLinksModel(data.value?.[0] ?? [], data.value?.[1] ?? [])
-    diagram.layoutDiagram(true)
+    diagram.commit(() => {
+      diagram.layoutDiagram(true)
+    })
   })
 }
 
@@ -166,13 +180,16 @@ onMounted(() => {
           <div v-if="selectedLink" class="col">
             <FieldInput v-model="selectedLink.label" label="Name" />
             <FieldSelect v-model="selectedLink.type" :options="linkStyles" label="Type" />
-            <FieldRow label="Von - Zu">
-              <FieldSelect v-model="selectedLink.from" :options="linkTargets" />
-              <FieldSelect v-model="selectedLink.to" :options="linkTargets" />
-            </FieldRow>
             <FieldRow>
-              <FieldInput v-model="selectedLink.fromLabel" />
-              <FieldInput v-model="selectedLink.toLabel" />
+              <FieldCol label="Von">
+                <FieldSelect v-model="selectedLink.from" :options="linkTargets" />
+                <FieldInput v-model="selectedLink.fromLabel" />
+              </FieldCol>
+              <UButton icon="mdi:swap-horizontal" @click="swapLinkTargets" variant="ghost" size="xs" />
+              <FieldCol label="Zu">
+                <FieldSelect v-model="selectedLink.to" :options="linkTargets" />
+                <FieldInput v-model="selectedLink.toLabel" />
+              </FieldCol>
             </FieldRow>
             <UTextarea v-model="selectedLink.text" label="Beschreibung" divs="5" />
           </div>

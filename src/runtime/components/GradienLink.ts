@@ -39,7 +39,63 @@ export class GradientLink extends go.Link {
 
   override computePoints() {
     var result = super.computePoints();
-    if (result) this.updateBrush();
+
+    if (false && !this.isOrthogonal && this.curve == go.Curve.Bezier && this.hasCurviness()) {
+      const curv = this.computeCurviness();
+      if (curv !== 0) {
+        const num = this.pointsCount;
+        let pidx = 0;
+        let qidx = num - 1;
+        if (num >= 4) {
+          pidx++;
+          qidx--;
+        }
+        const frompt = this.getPoint(pidx);
+        const topt = this.getPoint(qidx);
+        const dx = topt.x - frompt.x;
+        const dy = topt.y - frompt.y;
+        let mx = frompt.x + (dx * 1) / 8;
+        let my = frompt.y + (dy * 1) / 8;
+        let px = mx;
+        let py = my;
+        if (-0.01 < dy && dy < 0.01) {
+          if (dx > 0)
+            py -= curv;
+          else
+            py += curv;
+        }
+        else {
+          const slope = -dx / dy;
+          let e = Math.sqrt((curv * curv) / (slope * slope + 1));
+          if (curv < 0)
+            e = -e;
+          px = (dy < 0 ? -1 : 1) * e + mx;
+          py = slope * (px - mx) + my;
+        }
+        mx = frompt.x + (dx * 7) / 8;
+        my = frompt.y + (dy * 7) / 8;
+        let qx = mx;
+        let qy = my;
+        if (-0.01 < dy && dy < 0.01) {
+          if (dx > 0)
+            qy -= curv;
+          else
+            qy += curv;
+        }
+        else {
+          const slope = -dx / dy;
+          let e = Math.sqrt((curv * curv) / (slope * slope + 1));
+          if (curv < 0)
+            e = -e;
+          qx = (dy < 0 ? -1 : 1) * e + mx;
+          qy = slope * (qx - mx) + my;
+        }
+        this.insertPointAt(pidx + 1, px, py);
+        this.insertPointAt(qidx + 1, qx, qy);
+      }
+    }
+
+    // if (result) this.updateBrush();
     return result;
   }
 }
