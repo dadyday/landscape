@@ -44,15 +44,6 @@ const groupTargets = computed(() => data.value?.[0].filter((item) => item.isGrou
   })
 ))
 
-function swapLinkTargets() {
-  let tmp = selectedLink.value.from
-  selectedLink.value.from = selectedLink.value.to
-  selectedLink.value.to = tmp
-
-  tmp = selectedLink.value.fromText
-  selectedLink.value.fromText = selectedLink.value.toText
-  selectedLink.value.toText = tmp
-}
 
 // tag adding
 // ------------------------------------------------------
@@ -120,8 +111,6 @@ function refreshFilters() {
 const filterTags = ref(['foo'])
 watch(filterTags, refreshFilters, { immediate: true })
 
-
-
 // load & save
 // ------------------------------------------------------
 async function loadData() {
@@ -152,8 +141,8 @@ onMounted(() => {
 
 <template>
   <div>
-    Landscape
-    {{ filterTags.length }}
+    <div>Landscape</div>
+
     <div class="row">
       <UButton icon="mdi:file-upload-outline" label="Laden" @click="loadData" size="xs"></UButton>
       <UButton icon="mdi:content-save-outline" label="Speichern" @click="saveData" size="xs"></UButton>
@@ -166,36 +155,28 @@ onMounted(() => {
         <UButton :variant="adding ? 'solid' : 'subtle'" :disabled="!addingTag" icon="mdi:target" @click="toggleAdding"></UButton>
       </UButtonGroup>
     </div>
+
     <div class="row">
       <div ref="diagramDiv" class="diagram" :class="{ 'cursor-pointer': adding }"></div>
-      <Transition>
-        <div v-if="selectedNode || selectedLink" class="slide">
-          <div v-if="selectedNode" class="col">
-            <FieldInput v-model="selectedNode.title" label="Name" />
-            <FieldSelect v-model="selectedNode.type" :options="nodeStyles" label="Type" />
-            <FieldSelect v-model="selectedNode.group" :options="groupTargets" label="Gehört zu" />
-            <UTextarea v-model="selectedNode.text" label="Beschreibung" divs="5" />
-            <FieldSelectMulti v-model="selectedNode.tags" :options="tags" label="Tags" @change="refreshFilters"/>
-          </div>
-          <div v-if="selectedLink" class="col">
-            <FieldInput v-model="selectedLink.label" label="Name" />
-            <FieldSelect v-model="selectedLink.type" :options="linkStyles" label="Type" />
-            <FieldRow>
-              <FieldCol label="Von">
-                <FieldSelect v-model="selectedLink.from" :options="linkTargets" />
-                <FieldInput v-model="selectedLink.fromLabel" />
-              </FieldCol>
-              <UButton icon="mdi:swap-horizontal" @click="swapLinkTargets" variant="ghost" size="xs" />
-              <FieldCol label="Zu">
-                <FieldSelect v-model="selectedLink.to" :options="linkTargets" />
-                <FieldInput v-model="selectedLink.toLabel" />
-              </FieldCol>
-            </FieldRow>
-            <UTextarea v-model="selectedLink.text" label="Beschreibung" divs="5" />
-          </div>
-        </div>
-      </Transition>
     </div>
+
+    <ToolBox
+      v-show="selectedNode || selectedLink"
+      :label="selectedNode ? 'Node Eigenschaften' : 'Link Eigenschaften'"
+    >
+      <NodeForm v-if="selectedNode"
+        v-model="selectedNode"
+        :types="nodeStyles"
+        :targets="groupTargets"
+        :tags
+      />
+      <LinkForm v-if="selectedLink"
+        v-model="selectedLink"
+        :types="linkStyles"
+        :targets="linkTargets"
+        :tags
+      />
+    </ToolBox>
 
   </div>
 </template>
@@ -214,9 +195,6 @@ onMounted(() => {
 }
 .slide {
   width: 33%;
-}
-.col {
-  @apply flex flex-col gap-1;
 }
 
 .v-enter-active {
