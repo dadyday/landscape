@@ -56,7 +56,11 @@ function bindIcon(node: Part) {
 
   const [_, lib, name, c] = icon?.match(/^([\w-]+):([\w-]+)\s*(.+)?$/) ?? []
   if (!name) symbol.text = icon
-    else if (icons[name]) glyph.geometry = icons[name]
+  else if (icons[name]) {
+    //node.diagram.startTransaction("change node")
+    glyph.geometry = icons[name]
+    //node.diagram.commitTransaction("change node");
+  }
   else {
     loadIcon(name).then((geom) => {
         node.diagram?.commit(() => {
@@ -69,16 +73,18 @@ function bindIcon(node: Part) {
 }
 
 function bindNode(node: Part, obj: Partial<any>) {
-  const color = nodeProp(node.data, 'color')
-  const transp = makeTransparent(color, 0)
-  const back = node.findObject('back') as go.Shape
-  const title = node.findObject('title') as go.TextBlock
+  node.diagram?.commit(() => {
+    const color = nodeProp(node.data, 'color')
+    const transp = makeTransparent(color, 0)
+    const back = node.findObject('back') as go.Shape
+    const title = node.findObject('title') as go.TextBlock
 
-  obj.opacity = node.data.hidden ? 0.1 : 1
-  back.fill = nodeProp(node.data, 'fill')
-  back.stroke = nodeProp(node.data, 'stroke')
-  title.text = node.data?.title
-  bindIcon(node)
+    obj.opacity = node.data.hidden ? 0.1 : 1
+    back.fill = nodeProp(node.data, 'fill')
+    back.stroke = nodeProp(node.data, 'stroke')
+    title.text = node.data?.title
+    bindIcon(node)
+  })
 }
 
 function bindLink(link: Link, obj: Partial<any>) {
@@ -125,7 +131,6 @@ function bindLink(link: Link, obj: Partial<any>) {
 
 const nodeTooltip = new go.TextBlock({ margin: 4 })
   .bind("text", "description")
-
 
 const groupTemplate = new go.Group('Vertical', {
   locationSpot:              go.Spot.Center,
@@ -203,8 +208,8 @@ const linkTemplate = new GradientLink({
   curve:                go.Curve.Bezier, // Bezier JumpOver JumpGap
   // corner:               10,
   // curviness:            40,
-  mouseEnter: (e, link) => link.elt(0).strokeWidth = 4,
-  mouseLeave: (e, link) => link.elt(0).strokeWidth = 1.5,
+  mouseEnter: (e, link) => ((link as go.Link).elt(0) as go.Shape).strokeWidth = 4,
+  mouseLeave: (e, link) => ((link as go.Link).elt(0) as go.Shape).strokeWidth = 1.5,
 
   //fromSpot:             go.Spot.LeftRightSides,
   //fromEndSegmentLength: 10,

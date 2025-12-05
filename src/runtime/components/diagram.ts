@@ -1,49 +1,19 @@
 import go from 'gojs'
-import {merge} from "smob";
 import {groupTemplate, linkTemplate, nodeTemplate} from "./templates";
 import {AvoidsLinksRouter} from "./AvoidsLinksRouter";
 import {CurvedLinkReshapingTool} from "./CurvedLinkReshapingTool";
 
 // helper
 
-// dragging
-let lastGroup: Partial<any> | null = null
-
-function enterDrag(e: Event, group: Partial<any>) {
-  // console.log('enter', group?.key)
-  if (lastGroup) lastGroup.isHighlighted = false
-  if (group) {
-    group.isHighlighted = true
-    lastGroup = group
-  }
-}
-
-function leaveDrag(e: Event, group: Partial<any>) {
-  // console.log('leave', grp?.key)
-}
-
-function stopDrag(e: Event, group: Partial<any>) {
-  // console.log('stop', grp?.key)
-  if (lastGroup) lastGroup.isHighlighted = false
-  lastGroup = null
-  if (group) {
-    group.addMembers(group.diagram.selection, true)
-  }
-}
-
-
 export default (options: go.DiagramInitOptions = {}): go.Diagram => {
 
-  // groupTemplate.mouseDragEnter = enterDrag // (e, grp, prev) => highlightGroup(e, grp, true),
-  // groupTemplate.mouseDragLeave = leaveDrag // (e, grp, next) => highlightGroup(e, grp, false),
-  // groupTemplate.mouseDrop = stopDrag // (e, nod) => finishDrop(e, nod),
 
   const diagram =  new go.Diagram({
     'undoManager.isEnabled':                true,
     'clickCreatingTool.archetypeNodeData':    { title: 'Neue Node', type: '' },
     // 'commandHandler.memberValidation':      (group, node) => !(node instanceof go.Group),
     // 'commandHandler.archetypeGroupData':    { isGroup: true, title: 'Neuer Server', type: 'server' },
-    // mouseDrop:                           stopDrag,
+    // mouseDrop:                           ...,
     'draggingTool.isGridSnapEnabled':       true,
     'maxSelectionCount':                    1,
     "linkingTool.direction": go.LinkingTool.ForwardsOnly,

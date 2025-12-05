@@ -1,8 +1,4 @@
 
-
-
-
-
 export const nodeStyles:Partial<any> = {
   'default': {
     label: 'Fragment',
