@@ -3,6 +3,7 @@ import Diagram from './diagram'
 import go, {type ObjectData} from 'gojs'
 import {nodeStyles, linkStyles} from './styles'
 import {sleep} from "@antfu/utils";
+import ArrayMerge from '../utils/ArrayMerge'
 
 const diagramDiv = ref()
 const el = useTemplateRef('diagramDiv')
@@ -52,25 +53,22 @@ function toggleAdding() {
   adding.value = !adding.value
   refreshFilters()
 }
-const addingTag = ref('foo')
+
 function toggleTag(node: ObjectData) {
-  if (!adding.value || !addingTag.value) return
-  if (!node.tags) node.tags = []
-  if (node.tags.includes(addingTag.value)) {
-    node.tags = node.tags.filter((tag) => tag !== addingTag.value)
-  }
-  else {
-    node.tags.push(addingTag.value)
-  }
+  if (!adding.value) return
+
+  if (!node.tags) node.tags = new ArrayMerge()
+  if (!(node.tags instanceof ArrayMerge)) node.tags = new ArrayMerge(...node.tags)
+
+  node.tags.toggle(filterTags.value);
 }
+
 diagram.addDiagramListener('ObjectSingleClicked', (ev) => {
   const obj = ev.subject
   if (obj !instanceof go.Node) return
   toggleTag(selectedNode.value)
   refreshFilters()
 })
-watch(addingTag, refreshFilters, {})
-
 
 
 // tag filtering
@@ -103,8 +101,7 @@ function attachFilter(filterTags: string[] = []) {
 }
 
 function refreshFilters() {
-  const filters = adding.value ? [addingTag.value] : filterTags.value
-  attachFilter(filters)
+  attachFilter(filterTags.value)
   refreshDiagram()
 }
 
@@ -147,12 +144,9 @@ onMounted(() => {
       <UButton icon="mdi:file-upload-outline" label="Laden" @click="loadData" size="xs"></UButton>
       <UButton icon="mdi:content-save-outline" label="Speichern" @click="saveData" size="xs"></UButton>
       <UButtonGroup>
-        <FieldSelectMulti v-model="filterTags" :options="tags" width="20%" icon="mdi:tag-search-outline"/>
+        <FieldSelectMulti v-model="filterTags" :options="tags" width="20%" :icon="adding ? 'mdi:tag-plus-outline' : 'mdi:tag-search-outline'"/>
         <UButton :variant="filtering && filterTags?.length ? 'solid' : 'subtle'" :disabled="!filterTags.length" icon="mdi:eye-outline" @click="toggleFiltering"></UButton>
-      </UButtonGroup>
-      <UButtonGroup>
-        <FieldSelect v-model="addingTag" :options="tags" width="20%" icon="mdi:tag-plus-outline"/>
-        <UButton :variant="adding ? 'solid' : 'subtle'" :disabled="!addingTag" icon="mdi:target" @click="toggleAdding"></UButton>
+        <UButton :variant="adding ? 'solid' : 'subtle'" :disabled="!filterTags.length" icon="mdi:target" @click="toggleAdding"></UButton>
       </UButtonGroup>
     </div>
 
